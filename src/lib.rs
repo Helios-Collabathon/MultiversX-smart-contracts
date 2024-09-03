@@ -4,6 +4,8 @@
 use multiversx_sc::imports::*;
 use multiversx_sc::derive_imports::*;
 
+const MAX_WALLETS: usize = 25;
+
 type PersonaId = usize;
 
 #[type_abi]
@@ -17,12 +19,12 @@ enum Chain {
 #[derive(NestedDecode, NestedEncode, TopEncode, TopDecode)]
 struct Persona<M: ManagedTypeApi> { 
     id: PersonaId,
-    wallets: ManagedVec<M, LinkedWallets<M>>,
+    wallets: ManagedVec<M, LinkedWallet<M>>,
 }
 
 #[type_abi]
 #[derive(NestedDecode, NestedEncode, TopEncode, TopDecode, ManagedVecItem)]
-struct LinkedWallets<M: ManagedTypeApi> {
+struct LinkedWallet<M: ManagedTypeApi> {
     address: ManagedAddress<M>,
     chain: Chain,
 }
@@ -37,11 +39,11 @@ pub trait Identity {
     #[upgrade]
     fn upgrade(&self) {}
 
-    fn create_persona(&self, caller: &ManagedAddress, chain: Chain, address: &ManagedAddress) {
+    fn create_persona(&self, caller: &ManagedAddress, chain: &Chain, address: &ManagedAddress) {
         let id = self.next_pers_id().get();
         self.next_pers_id().set(id + 1);
         self.owner_lookup(caller.clone()).set(id);
-        let storage_key = self.get_combined_key(chain, &address);
+        let storage_key = self.get_combined_key(&chain, &address);
 
         self.persona_lookup(storage_key).set(id);
     }
@@ -51,7 +53,7 @@ pub trait Identity {
         persona_id != 0
     }
 
-    fn get_combined_key(&self, chain: Chain, address: &ManagedAddress) -> ManagedBuffer {
+    fn get_combined_key(&self, chain: &Chain, address: &ManagedAddress) -> ManagedBuffer {
         let mut key = ManagedBuffer::new();
         key.append(address.as_managed_buffer());
         let mut chain_segment = ManagedBuffer::new();
@@ -67,46 +69,48 @@ pub trait Identity {
         let caller = self.blockchain().get_caller();
     
         if !self.has_persona(&caller) {
-            self.create_persona(&caller, chain, &address);
+            self.create_persona(&caller, &chain, &address);
         }
     
         let persona_id = self.owner_lookup(caller).get();
-        self.persona_wallets(persona_id).insert(address);
+        require!(self.persona_wallets(persona_id).len() < MAX_WALLETS, "Max wallets reached");
+        
+        self.persona_wallets(persona_id).insert(LinkedWallet {
+            address,
+            chain,
+        });
     }
 
     #[endpoint(removeWallet)]
-    fn remove_wallet(&self, address: ManagedAddress) {
+    fn remove_wallet(&self, chain: Chain, address: ManagedAddress) {
         let caller = self.blockchain().get_caller();
         require!(self.has_persona(&caller), "Persona not found");
     
         let persona_id = self.owner_lookup(caller).get();
-        self.persona_wallets(persona_id).swap_remove(&address);
+        self.persona_wallets(persona_id).swap_remove(&LinkedWallet {
+            address,
+            chain,
+        });
     }
 
     #[view(getPersonaByAddress)]
     fn get_persona_by_address(&self, chain: Chain, address: ManagedAddress) -> Persona<Self::Api> {
-        let storage_key =  self.get_combined_key(chain, &address);
+        let storage_key =  self.get_combined_key(&chain, &address);
 
         let id = self.persona_lookup(storage_key).get();
-        let wallets = self.persona_wallets(id).iter().map(|address| LinkedWallets {
-            address: address.clone(),
-            chain: Chain::MultiversX,
-        }).collect::<ManagedVec<LinkedWallets<Self::Api>>>();
+        let wallets = self.persona_wallets(id).iter().collect::<ManagedVec<LinkedWallet<Self::Api>>>();
 
         Persona {
             id,
             wallets 
         }
     }
-    
-    #[storage_mapper("personas")]
-    fn personas(&self, id: PersonaId) -> SingleValueMapper<Persona<Self::Api>>;
 
     #[storage_mapper("persona_lookup")]
     fn persona_lookup(&self, storage_key: ManagedBuffer) -> SingleValueMapper<PersonaId>;
 
     #[storage_mapper("wallets")]
-    fn persona_wallets(&self, id: PersonaId) -> UnorderedSetMapper<ManagedAddress>;
+    fn persona_wallets(&self, id: PersonaId) -> UnorderedSetMapper<LinkedWallet<Self::Api>>;
 
     #[storage_mapper("next_pers_id")]
     fn next_pers_id(&self) -> SingleValueMapper<PersonaId>;
