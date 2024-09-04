@@ -9,21 +9,21 @@ const MAX_WALLETS: usize = 25;
 type PersonaId = usize;
 
 #[type_abi]
-#[derive(NestedDecode, NestedEncode, TopEncode, TopDecode, ManagedVecItem)]
+#[derive(NestedDecode, NestedEncode, TopEncode, TopDecode, ManagedVecItem, Clone, Debug, PartialEq, Eq)]
 enum Chain {
     MultiversX,
     Injective,
 }
 
 #[type_abi]
-#[derive(NestedDecode, NestedEncode, TopEncode, TopDecode)]
+#[derive(NestedDecode, NestedEncode, TopEncode, TopDecode, Debug, PartialEq, Eq)]
 struct Persona<M: ManagedTypeApi> { 
     id: PersonaId,
     wallets: ManagedVec<M, LinkedWallet<M>>,
 }
 
 #[type_abi]
-#[derive(NestedDecode, NestedEncode, TopEncode, TopDecode, ManagedVecItem)]
+#[derive(NestedDecode, NestedEncode, TopEncode, TopDecode, ManagedVecItem, Debug, Clone, PartialEq, Eq)]
 struct LinkedWallet<M: ManagedTypeApi> {
     address: ManagedAddress<M>,
     chain: Chain,
@@ -39,18 +39,20 @@ pub trait Identity {
     #[upgrade]
     fn upgrade(&self) {}
 
-    fn create_persona(&self, caller: &ManagedAddress, chain: &Chain, address: &ManagedAddress) {
+    fn create_persona(&self, caller: &ManagedAddress) {
         let id = self.next_pers_id().get();
         self.next_pers_id().set(id + 1);
         self.owner_lookup(caller.clone()).set(id);
-        let storage_key = self.get_combined_key(&chain, &address);
-
-        self.persona_lookup(storage_key).set(id);
     }
 
     fn has_persona(&self, caller: &ManagedAddress) -> bool {
         let persona_id = self.owner_lookup(caller.clone()).get();
         persona_id != 0
+    }
+
+    fn link_wallet_to_persona(&self, persona_id: PersonaId, chain: &Chain, address: &ManagedAddress) {
+        let storage_key = self.get_combined_key(&chain, &address);
+        self.persona_lookup(storage_key).set(persona_id);
     }
 
     fn get_combined_key(&self, chain: &Chain, address: &ManagedAddress) -> ManagedBuffer {
@@ -67,14 +69,22 @@ pub trait Identity {
     #[endpoint(addWallet)]
     fn add_wallet(&self, chain: Chain, address: ManagedAddress) {
         let caller = self.blockchain().get_caller();
+
+        require!(caller != address, "Cannot add own address");
     
         if !self.has_persona(&caller) {
-            self.create_persona(&caller, &chain, &address);
+            self.create_persona(&caller);
         }
     
         let persona_id = self.owner_lookup(caller).get();
+        self.link_wallet_to_persona(persona_id, &chain, &address);
+    
         require!(self.persona_wallets(persona_id).len() < MAX_WALLETS, "Max wallets reached");
-        
+        require!(!self.persona_wallets(persona_id).contains(&LinkedWallet {
+            address: address.clone(),
+            chain: chain.clone(),
+        }), "Wallet already added");
+    
         self.persona_wallets(persona_id).insert(LinkedWallet {
             address,
             chain,
@@ -85,12 +95,17 @@ pub trait Identity {
     fn remove_wallet(&self, chain: Chain, address: ManagedAddress) {
         let caller = self.blockchain().get_caller();
         require!(self.has_persona(&caller), "Persona not found");
-    
+
+        let storage_key = self.get_combined_key(&chain, &address);
+        require!(self.persona_lookup(storage_key).get() != 0, "Wallet not found");
+
         let persona_id = self.owner_lookup(caller).get();
+
         self.persona_wallets(persona_id).swap_remove(&LinkedWallet {
-            address,
-            chain,
+            address: address.clone(),
+            chain: chain.clone(),
         });
+        self.persona_lookup(self.get_combined_key(&chain, &address)).clear();
     }
 
     #[view(getPersonaByAddress)]
