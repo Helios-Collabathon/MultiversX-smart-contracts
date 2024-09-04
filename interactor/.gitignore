@@ -1,2 +1,2 @@
-state.toml
 src/proxy.rs
+*.pem
