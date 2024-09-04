@@ -1,6 +1,6 @@
 use multiversx_sc::imports::*;
 
-use crate::{chain::Chain, persona::Persona};
+use crate::{chain::Chain, errors::ERROR_TO_CREATE_KEY, persona::Persona};
 
 #[multiversx_sc::module]
 pub trait IdentityUtils: crate::storage::IdentityStorage {
@@ -25,7 +25,7 @@ pub trait IdentityUtils: crate::storage::IdentityStorage {
         key.append(address.as_managed_buffer());
         let mut chain_segment = ManagedBuffer::new();
         if chain.top_encode(&mut chain_segment).is_err() {
-            sc_panic!("Failed to serialized batch");
+            sc_panic!(ERROR_TO_CREATE_KEY);
         }
         key.append(&chain_segment);
         key

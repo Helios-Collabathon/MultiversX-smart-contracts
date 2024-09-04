@@ -11,8 +11,8 @@ pub trait IdentityViews: crate::storage::IdentityStorage + crate::utils::Identit
         persona
     }
 
-    #[view(getPersonaByAddress)]
-    fn get_persona_by_linked_wallet(&self, chain: Chain, address: ManagedAddress) -> ManagedVec<Self::Api, Persona<Self::Api>> {
+    #[view(getPersonasByAddress)]
+    fn get_personas_by_linked_wallet(&self, chain: Chain, address: ManagedAddress) -> ManagedVec<Self::Api, Persona<Self::Api>> {
         let storage_key =  self.get_combined_key(&chain, &address);
     
         let personas = self.persona_lookup(storage_key)

@@ -21,7 +21,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         init => init
         upgrade => upgrade
         getPersona => get_persona
-        getPersonaByAddress => get_persona_by_linked_wallet
+        getPersonasByAddress => get_personas_by_linked_wallet
         addWallet => add_wallet
         removeWallet => remove_wallet
     )

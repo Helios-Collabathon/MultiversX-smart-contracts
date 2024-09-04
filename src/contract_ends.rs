@@ -1,6 +1,6 @@
 use multiversx_sc::imports::*;
 
-use crate::{chain::Chain, wallet::Wallet};
+use crate::{chain::Chain, errors::*, wallet::Wallet};
 
 const MAX_WALLETS: usize = 25;
 
@@ -10,18 +10,18 @@ pub trait IdentityEndpoints: crate::storage::IdentityStorage + crate::utils::Ide
     fn add_wallet(&self, chain: Chain, address: ManagedAddress) {
         let caller = self.blockchain().get_caller();
 
-        require!(caller != address, "Cannot add own address");
+        require!(caller != address, ERROR_CANNOT_ADD_OWN_ADDRESS);
     
         if !self.has_persona(caller.clone()) {
             self.create_persona(caller.clone());
         }
     
         let mut persona = self.personas(caller.clone()).get();
-        require!(persona.linked_wallets.len() < MAX_WALLETS, "Max wallets reached");
+        require!(persona.linked_wallets.len() < MAX_WALLETS, ERROR_MAX_WALLETS_REACHED);
         require!(!persona.linked_wallets.contains(&Wallet {
             address: address.clone(),
             chain: chain.clone(),
-        }), "Wallet already added");
+        }), ERROR_WALLET_ALREADY_ADDED);
     
         persona.linked_wallets.push(Wallet {
             address: address.clone(),
@@ -34,10 +34,10 @@ pub trait IdentityEndpoints: crate::storage::IdentityStorage + crate::utils::Ide
     #[endpoint(removeWallet)]
     fn remove_wallet(&self, chain: Chain, address: ManagedAddress) {
         let caller = self.blockchain().get_caller();
-        require!(self.has_persona(caller.clone()), "Persona not found");
+        require!(self.has_persona(caller.clone()), ERROR_PERSONA_NOT_FOUND);
 
         let storage_key = self.get_combined_key(&chain, &address);
-        require!(self.persona_lookup(storage_key).contains(&caller), "Wallet not found");
+        require!(self.persona_lookup(storage_key).contains(&caller), ERROR_WALLET_NOT_FOUND);
 
         let mut persona = self.personas(caller.clone()).get();
         let index = persona.linked_wallets.iter().position(|wallet| {

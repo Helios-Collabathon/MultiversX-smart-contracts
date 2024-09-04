@@ -171,7 +171,7 @@ impl ContractInteract {
             .query()
             .to(self.state.current_address())
             .typed(proxy::IdentityProxy)
-            .get_persona_by_linked_wallet(chain, address)
+            .get_personas_by_linked_wallet(chain, address)
             .returns(ReturnsResultUnmanaged)
             .prepare_async()
             .run()

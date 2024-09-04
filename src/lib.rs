@@ -7,6 +7,7 @@ pub mod views;
 pub mod storage;
 pub mod utils;
 pub mod contract_ends;
+pub mod errors;
 
 #[allow(unused_imports)]
 use multiversx_sc::imports::*;
