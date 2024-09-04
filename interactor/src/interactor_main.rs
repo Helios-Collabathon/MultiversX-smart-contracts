@@ -26,7 +26,6 @@ async fn main() {
     let _interact = ContractInteract::new().await;
 }
 
-
 #[derive(Debug, Default, Serialize, Deserialize)]
 struct State {
     contract_address: Option<Bech32Address>
@@ -166,20 +165,20 @@ impl ContractInteract {
             .await;
     }
 
-    async fn get_persona_by_address(&mut self, chain: proxy::Chain, address: ManagedAddress<StaticApi>, result: proxy::Persona<StaticApi>) {
-        let persona = self
+    async fn get_persona_by_address(&mut self, chain: proxy::Chain, address: ManagedAddress<StaticApi>, result: ManagedVec<StaticApi, proxy::Persona<StaticApi>>) {
+        let personas = self
             .interactor
             .query()
             .to(self.state.current_address())
             .typed(proxy::IdentityProxy)
-            .get_persona_by_address(chain, address)
+            .get_persona_by_linked_wallet(chain, address)
             .returns(ReturnsResultUnmanaged)
             .prepare_async()
             .run()
             .await;
         
-        println!("persona: {:?}", persona);
-        assert!(persona == result);
+        println!("persona: {:?}", personas);
+        assert!(ManagedVec::from(personas) == result);
     }
 }
 
@@ -192,16 +191,10 @@ async fn test_deploy() {
 #[tokio::test]
 async fn test_get_empty_persona_by_address() {
     let mut interact = ContractInteract::new().await;
-    interact.deploy().await;
     let chain = proxy::Chain::MultiversX;
     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
-
-    let result = proxy::Persona {
-        id: 0,
-        wallets: ManagedVec::new(),
-    };
     
-    interact.get_persona_by_address(chain, address, result).await;
+    interact.get_persona_by_address(chain, address, ManagedVec::new()).await;
 }
 
 #[tokio::test]
@@ -219,17 +212,16 @@ async fn test_add_wallet_for_non_existing_persona() {
     let chain = proxy::Chain::MultiversX;
     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
     
-    let mut result = proxy::Persona {
-        id: 1,
-        wallets: ManagedVec::new(),
+    let mut persona = proxy::Persona {
+        linked_wallets: ManagedVec::new(),
     };
-    result.wallets.push(proxy::LinkedWallet {
+    persona.linked_wallets.push(proxy::Wallet {
         address: address.clone(),
         chain: chain.clone(),
     });
-
+    
     interact.add_wallet(chain.clone(), address.clone()).await;
-    interact.get_persona_by_address(chain, address, result).await;
+    interact.get_persona_by_address(chain, address, ManagedVec::from_single_item(persona)).await;
 }
 
 #[tokio::test]
@@ -239,22 +231,20 @@ async fn test_add_wallet_for_existing_persona() {
     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::bob().address().to_bytes()));
     let old_address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
     
-    let mut result = proxy::Persona {
-        id: 1,
-        wallets: ManagedVec::new(),
+    let mut persona = proxy::Persona {
+        linked_wallets: ManagedVec::new(),
     };
-    result.wallets.push(proxy::LinkedWallet {
+    persona.linked_wallets.push(proxy::Wallet {
         address: old_address,
         chain: chain.clone(),
     });
-    result.wallets.push(proxy::LinkedWallet {
+    persona.linked_wallets.push(proxy::Wallet {
         address: address.clone(),
         chain: chain.clone(),
     });
 
-
     interact.add_wallet(chain.clone(), address.clone()).await;
-    interact.get_persona_by_address(chain, address, result).await;
+    interact.get_persona_by_address(chain, address, ManagedVec::from_single_item(persona)).await;
 }
 
 #[tokio::test]
@@ -282,17 +272,16 @@ async fn test_remove_wallet() {
     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
     let remaining_address = ManagedAddress::from(&Address::from_slice(&test_wallets::bob().address().to_bytes()));
 
-    let mut result = proxy::Persona {
-        id: 1,
-        wallets: ManagedVec::new(),
+    let mut persona = proxy::Persona {
+        linked_wallets: ManagedVec::new(),
     };
-    result.wallets.push(proxy::LinkedWallet {
+    persona.linked_wallets.push(proxy::Wallet {
         address: remaining_address.clone(),
         chain: chain.clone(),
     });
 
     interact.remove_wallet(chain.clone(), address).await;
-    interact.get_persona_by_address(chain, remaining_address, result).await;
+    interact.get_persona_by_address(chain, remaining_address, ManagedVec::from_single_item(persona)).await;
 }
 
 #[tokio::test]
