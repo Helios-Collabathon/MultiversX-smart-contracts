@@ -213,6 +213,7 @@ async fn test_add_wallet_for_non_existing_persona() {
     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
     
     let mut persona = proxy::Persona {
+        address: ManagedAddress::from(&interact.wallet_address),
         linked_wallets: ManagedVec::new(),
     };
     persona.linked_wallets.push(proxy::Wallet {
@@ -232,6 +233,7 @@ async fn test_add_wallet_for_existing_persona() {
     let old_address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
     
     let mut persona = proxy::Persona {
+        address: ManagedAddress::from(&interact.wallet_address),
         linked_wallets: ManagedVec::new(),
     };
     persona.linked_wallets.push(proxy::Wallet {
@@ -273,6 +275,7 @@ async fn test_remove_wallet() {
     let remaining_address = ManagedAddress::from(&Address::from_slice(&test_wallets::bob().address().to_bytes()));
 
     let mut persona = proxy::Persona {
+        address: ManagedAddress::from(&interact.wallet_address),
         linked_wallets: ManagedVec::new(),
     };
     persona.linked_wallets.push(proxy::Wallet {

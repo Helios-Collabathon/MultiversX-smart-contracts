@@ -6,6 +6,7 @@ use crate::{chain::Chain, errors::ERROR_TO_CREATE_KEY, persona::Persona};
 pub trait IdentityUtils: crate::storage::IdentityStorage {
     fn create_persona(&self, caller: ManagedAddress) {
         let persona = Persona {
+            address: caller.clone(),
             linked_wallets: ManagedVec::new(),
         };
         self.personas(caller).set(persona);

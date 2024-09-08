@@ -5,10 +5,14 @@ use crate::{chain::Chain, persona::Persona};
 #[multiversx_sc::module]
 pub trait IdentityViews: crate::storage::IdentityStorage + crate::utils::IdentityUtils {
     #[view(getPersona)]
-    fn get_persona(&self, address: ManagedAddress) -> Persona<Self::Api> {
+    fn get_persona(&self, address: ManagedAddress) -> OptionalValue<Persona<Self::Api>> {
+        if self.personas(address.clone()).is_empty() {
+            return OptionalValue::None;
+        }
+
         let persona = self.personas(address).get();
 
-        persona
+        OptionalValue::Some(persona)
     }
 
     #[view(getPersonasByAddress)]
@@ -17,7 +21,7 @@ pub trait IdentityViews: crate::storage::IdentityStorage + crate::utils::Identit
     
         let personas = self.persona_lookup(storage_key)
             .into_iter()
-            .map(|address| self.get_persona(address))
+            .map(|address| self.get_persona(address).into_option().unwrap())
             .collect();
     
         personas
