@@ -184,115 +184,116 @@ impl ContractInteract {
 
 #[tokio::test]
 async fn test_deploy() {
-    // let mut interact = ContractInteract::new().await;
-    // interact.deploy().await;
-    println!("{:?}", ManagedBuffer::<StaticApi>::from("erd1lv48p9j6knnq7xdjpg0gn0nq7g4t6rfyc0gy398re4lxx3chgprsx5hmfu"));
+    let mut interact = ContractInteract::new().await;
+    interact.deploy().await;
 }
 
-// #[tokio::test]
-// async fn test_get_empty_persona_by_address() {
-//     let mut interact = ContractInteract::new().await;
-//     let chain = proxy::Chain::MultiversX;
-//     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
+#[tokio::test]
+async fn test_get_empty_persona_by_address() {
+    let mut interact = ContractInteract::new().await;
+    let chain = proxy::Chain::MultiversX;
+    let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
     
-//     interact.get_persona_by_address(chain, address, ManagedVec::new()).await;
-// }
+    interact.get_personas_by_linked_wallet(chain, address.as_managed_buffer().clone(), ManagedVec::new()).await;
+}
 
-// #[tokio::test]
-// async fn test_remove__wallet_non_existing_persona() {
-//     let mut interact = ContractInteract::new().await;
-//     let chain = proxy::Chain::MultiversX;
-//     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
+#[tokio::test]
+async fn test_remove__wallet_non_existing_persona() {
+    let mut interact = ContractInteract::new().await;
+    let chain = proxy::Chain::MultiversX;
+    let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
 
-//     interact.remove_wallet_fail(chain.clone(), address, ExpectError(4, "Persona not found")).await;
-// }
+    interact.remove_wallet_fail(chain.clone(), address.as_managed_buffer().clone(), ExpectError(4, "Persona not found")).await;
+}
 
-// #[tokio::test]
-// async fn test_add_wallet_for_non_existing_persona() {
-//     let mut interact = ContractInteract::new().await;
-//     let chain = proxy::Chain::MultiversX;
-//     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
+#[tokio::test]
+async fn test_add_wallet_for_non_existing_persona() {
+    let mut interact = ContractInteract::new().await;
+    let chain = proxy::Chain::MultiversX;
+    let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
+    let managed_buffer = address.as_managed_buffer().clone();
     
-//     let mut persona = proxy::Persona {
-//         address: ManagedAddress::from(&interact.wallet_address),
-//         linked_wallets: ManagedVec::new(),
-//     };
-//     persona.linked_wallets.push(proxy::Wallet {
-//         address: address.clone(),
-//         chain: chain.clone(),
-//     });
+    let mut persona = proxy::Persona {
+        address: ManagedAddress::from(&interact.wallet_address),
+        linked_wallets: ManagedVec::new(),
+    };
+    persona.linked_wallets.push(proxy::Wallet {
+        address: managed_buffer.clone(),
+        chain: chain.clone(),
+    });
     
-//     interact.add_wallet(chain.clone(), address.clone()).await;
-//     interact.get_persona_by_address(chain, address, ManagedVec::from_single_item(persona)).await;
-// }
+    interact.add_wallet(chain.clone(), managed_buffer.clone()).await;
+    interact.get_personas_by_linked_wallet(chain, managed_buffer, ManagedVec::from_single_item(persona)).await;
+}
 
-// #[tokio::test]
-// async fn test_add_wallet_for_existing_persona() {
-//     let mut interact = ContractInteract::new().await;
-//     let chain = proxy::Chain::MultiversX;
-//     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::bob().address().to_bytes()));
-//     let old_address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
+#[tokio::test]
+async fn test_add_wallet_for_existing_persona() {
+    let mut interact = ContractInteract::new().await;
+    let chain = proxy::Chain::MultiversX;
+    let address = ManagedAddress::from(&Address::from_slice(&test_wallets::bob().address().to_bytes()));
+    let old_address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
+    let managed_buffer = address.as_managed_buffer().clone();
     
-//     let mut persona = proxy::Persona {
-//         address: ManagedAddress::from(&interact.wallet_address),
-//         linked_wallets: ManagedVec::new(),
-//     };
-//     persona.linked_wallets.push(proxy::Wallet {
-//         address: old_address,
-//         chain: chain.clone(),
-//     });
-//     persona.linked_wallets.push(proxy::Wallet {
-//         address: address.clone(),
-//         chain: chain.clone(),
-//     });
+    let mut persona = proxy::Persona {
+        address: ManagedAddress::from(&interact.wallet_address),
+        linked_wallets: ManagedVec::new(),
+    };
+    persona.linked_wallets.push(proxy::Wallet {
+        address: old_address.as_managed_buffer().clone(),
+        chain: chain.clone(),
+    });
+    persona.linked_wallets.push(proxy::Wallet {
+        address: managed_buffer.clone(),
+        chain: chain.clone(),
+    });
 
-//     interact.add_wallet(chain.clone(), address.clone()).await;
-//     interact.get_persona_by_address(chain, address, ManagedVec::from_single_item(persona)).await;
-// }
+    interact.add_wallet(chain.clone(), managed_buffer.clone()).await;
+    interact.get_personas_by_linked_wallet(chain, managed_buffer, ManagedVec::from_single_item(persona)).await;
+}
 
-// #[tokio::test]
-// async fn test_add_wallet_same_address() {
-//     let mut interact = ContractInteract::new().await;
-//     let chain = proxy::Chain::MultiversX;
-//     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::ivan().address().to_bytes()));
+#[tokio::test]
+async fn test_add_wallet_same_address() {
+    let mut interact = ContractInteract::new().await;
+    let chain = proxy::Chain::MultiversX;
+    let address = ManagedAddress::from(&Address::from_slice(&test_wallets::ivan().address().to_bytes()));
 
-//     interact.add_wallet_fail(chain, address, ExpectError(4, "Cannot add own address")).await;
-// }
+    interact.add_wallet_fail(chain, address.as_managed_buffer().clone(), ExpectError(4, "Cannot add own address")).await;
+}
 
-// #[tokio::test]
-// async fn test_add_wallet_twice() {
-//     let mut interact = ContractInteract::new().await;
-//     let chain = proxy::Chain::MultiversX;
-//     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
+#[tokio::test]
+async fn test_add_wallet_twice() {
+    let mut interact = ContractInteract::new().await;
+    let chain = proxy::Chain::MultiversX;
+    let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
     
-//     interact.add_wallet_fail(chain, address, ExpectError(4, "Wallet already added")).await;
-// }
+    interact.add_wallet_fail(chain, address.as_managed_buffer().clone(), ExpectError(4, "Wallet already added")).await;
+}
 
-// #[tokio::test]
-// async fn test_remove_wallet() {
-//     let mut interact = ContractInteract::new().await;
-//     let chain = proxy::Chain::MultiversX;
-//     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
-//     let remaining_address = ManagedAddress::from(&Address::from_slice(&test_wallets::bob().address().to_bytes()));
+#[tokio::test]
+async fn test_remove_wallet() {
+    let mut interact = ContractInteract::new().await;
+    let chain = proxy::Chain::MultiversX;
+    let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
+    let remaining_address = ManagedAddress::from(&Address::from_slice(&test_wallets::bob().address().to_bytes()));
 
-//     let mut persona = proxy::Persona {
-//         address: ManagedAddress::from(&interact.wallet_address),
-//         linked_wallets: ManagedVec::new(),
-//     };
-//     persona.linked_wallets.push(proxy::Wallet {
-//         address: remaining_address.clone(),
-//         chain: chain.clone(),
-//     });
+    let mut persona = proxy::Persona {
+        address: ManagedAddress::from(&interact.wallet_address),
+        linked_wallets: ManagedVec::new(),
+    };
+    persona.linked_wallets.push(proxy::Wallet {
+        address: remaining_address.as_managed_buffer().clone(),
+        chain: chain.clone(),
+    });
 
-//     interact.remove_wallet(chain.clone(), address).await;
-//     interact.get_persona_by_address(chain, remaining_address, ManagedVec::from_single_item(persona)).await;
-// }
+    interact.remove_wallet(chain.clone(), address.as_managed_buffer().clone()).await;
+    interact.get_personas_by_linked_wallet(chain, remaining_address.as_managed_buffer().clone(), ManagedVec::from_single_item(persona)).await;
+}
 
-// #[tokio::test]
-// async fn test_remove_wallet_non_existing_wallet() {
-//     let mut interact = ContractInteract::new().await;
-//     let chain = proxy::Chain::MultiversX;
-//     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
+#[tokio::test]
+async fn test_remove_wallet_non_existing_wallet() {
+    let mut interact = ContractInteract::new().await;
+    let chain = proxy::Chain::MultiversX;
+    let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
 
-//     interact.remove_wallet_fail(chain.clone(), address, ExpectError(4, "Wallet not found")).await;
-// }
+    interact.remove_wallet_fail(chain.clone(), address.as_managed_buffer().clone(), ExpectError(4, "Wallet not found")).await;
+}
