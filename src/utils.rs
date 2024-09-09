@@ -16,14 +16,14 @@ pub trait IdentityUtils: crate::storage::IdentityStorage {
         !self.personas(caller).is_empty()
     }
 
-    fn link_wallet_to_persona(&self, caller: ManagedAddress, chain: &Chain, address: &ManagedAddress) {
+    fn link_wallet_to_persona(&self, caller: ManagedAddress, chain: &Chain, address: &ManagedBuffer) {
         let storage_key = self.get_combined_key(chain, address);
         self.persona_lookup(storage_key).insert(caller);
     }
 
-    fn get_combined_key(&self, chain: &Chain, address: &ManagedAddress) -> ManagedBuffer {
+    fn get_combined_key(&self, chain: &Chain, address: &ManagedBuffer) -> ManagedBuffer {
         let mut key = ManagedBuffer::new();
-        key.append(address.as_managed_buffer());
+        key.append(address);
         let mut chain_segment = ManagedBuffer::new();
         if chain.top_encode(&mut chain_segment).is_err() {
             sc_panic!(ERROR_TO_CREATE_KEY);

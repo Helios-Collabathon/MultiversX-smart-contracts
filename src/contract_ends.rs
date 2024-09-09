@@ -7,10 +7,10 @@ const MAX_WALLETS: usize = 25;
 #[multiversx_sc::module]
 pub trait IdentityEndpoints: crate::storage::IdentityStorage + crate::utils::IdentityUtils {
     #[endpoint(addWallet)]
-    fn add_wallet(&self, chain: Chain, address: ManagedAddress) {
+    fn add_wallet(&self, chain: Chain, address: ManagedBuffer) {
         let caller = self.blockchain().get_caller();
 
-        require!(caller != address, ERROR_CANNOT_ADD_OWN_ADDRESS);
+        require!(caller.as_managed_buffer().clone() != address, ERROR_CANNOT_ADD_OWN_ADDRESS);
     
         if !self.has_persona(caller.clone()) {
             self.create_persona(caller.clone());
@@ -24,20 +24,20 @@ pub trait IdentityEndpoints: crate::storage::IdentityStorage + crate::utils::Ide
         }), ERROR_WALLET_ALREADY_ADDED);
     
         persona.linked_wallets.push(Wallet {
-            address: address.clone(),
             chain: chain.clone(),
+            address: address.clone(),
         });
         self.personas(caller.clone()).set(persona);
         self.link_wallet_to_persona(caller, &chain, &address);
     }
 
     #[endpoint(removeWallet)]
-    fn remove_wallet(&self, chain: Chain, address: ManagedAddress) {
+    fn remove_wallet(&self, chain: Chain, address: ManagedBuffer) {
         let caller = self.blockchain().get_caller();
         require!(self.has_persona(caller.clone()), ERROR_PERSONA_NOT_FOUND);
 
         let storage_key = self.get_combined_key(&chain, &address);
-        require!(self.persona_lookup(storage_key).contains(&caller), ERROR_WALLET_NOT_FOUND);
+        require!(self.persona_lookup(storage_key.clone()).contains(&caller), ERROR_WALLET_NOT_FOUND);
 
         let mut persona = self.personas(caller.clone()).get();
         let index = persona.linked_wallets.iter().position(|wallet| {
@@ -46,6 +46,6 @@ pub trait IdentityEndpoints: crate::storage::IdentityStorage + crate::utils::Ide
         persona.linked_wallets.remove(index);
         
         self.personas(caller.clone()).set(persona);
-        self.persona_lookup(self.get_combined_key(&chain, &address)).clear();
+        self.persona_lookup(storage_key).clear();
     }
 }
