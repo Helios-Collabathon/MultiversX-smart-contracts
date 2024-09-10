@@ -46,6 +46,6 @@ pub trait IdentityEndpoints: crate::storage::IdentityStorage + crate::utils::Ide
         persona.linked_wallets.remove(index);
         
         self.personas(caller.clone()).set(persona);
-        self.persona_lookup(storage_key).clear();
+        self.persona_lookup(storage_key).swap_remove(&caller);
     }
 }

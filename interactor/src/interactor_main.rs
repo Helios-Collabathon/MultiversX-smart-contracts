@@ -5,6 +5,7 @@ mod proxy;
 
 use multiversx_sc_snippets::imports::*;
 use multiversx_sc_snippets::sdk;
+use multiversx_sc_snippets::sdk::wallet::Wallet;
 use serde::{Deserialize, Serialize};
 use std::{
     io::{Read, Write},
@@ -23,7 +24,7 @@ async fn main() {
     let mut args = std::env::args();
     let _ = args.next();
     let _cmd = args.next().expect("at least one argument required");
-    let _interact = ContractInteract::new().await;
+    let _interact = ContractInteract::new(OptionalValue::None).await;
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -74,9 +75,12 @@ struct ContractInteract {
 }
 
 impl ContractInteract {
-    async fn new() -> Self {
+    async fn new(mut address: OptionalValue<Wallet>) -> Self {
         let mut interactor = Interactor::new(GATEWAY).await;
-        let wallet_address = interactor.register_wallet(test_wallets::ivan());
+        if address.is_none() {
+            address = OptionalValue::Some(test_wallets::ivan());
+        }
+        let wallet_address = interactor.register_wallet(address.into_option().unwrap());
         
         let contract_code = BytesValue::interpret_from(
             "mxsc:../output/identity.mxsc.json",
@@ -184,13 +188,13 @@ impl ContractInteract {
 
 #[tokio::test]
 async fn test_deploy() {
-    let mut interact = ContractInteract::new().await;
+    let mut interact = ContractInteract::new(OptionalValue::None).await;
     interact.deploy().await;
 }
 
 #[tokio::test]
 async fn test_get_empty_persona_by_address() {
-    let mut interact = ContractInteract::new().await;
+    let mut interact = ContractInteract::new(OptionalValue::None).await;
     let chain = proxy::Chain::MultiversX;
     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
     
@@ -199,7 +203,7 @@ async fn test_get_empty_persona_by_address() {
 
 #[tokio::test]
 async fn test_remove__wallet_non_existing_persona() {
-    let mut interact = ContractInteract::new().await;
+    let mut interact = ContractInteract::new(OptionalValue::None).await;
     let chain = proxy::Chain::MultiversX;
     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
 
@@ -208,7 +212,7 @@ async fn test_remove__wallet_non_existing_persona() {
 
 #[tokio::test]
 async fn test_add_wallet_for_non_existing_persona() {
-    let mut interact = ContractInteract::new().await;
+    let mut interact = ContractInteract::new(OptionalValue::None).await;
     let chain = proxy::Chain::MultiversX;
     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
     let managed_buffer = address.as_managed_buffer().clone();
@@ -228,7 +232,7 @@ async fn test_add_wallet_for_non_existing_persona() {
 
 #[tokio::test]
 async fn test_add_wallet_for_existing_persona() {
-    let mut interact = ContractInteract::new().await;
+    let mut interact = ContractInteract::new(OptionalValue::None).await;
     let chain = proxy::Chain::MultiversX;
     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::bob().address().to_bytes()));
     let old_address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
@@ -252,8 +256,44 @@ async fn test_add_wallet_for_existing_persona() {
 }
 
 #[tokio::test]
+async fn test_add_wallet_by_different_persona() {
+    let mut interact = ContractInteract::new(OptionalValue::None).await;
+    let new_caller = OptionalValue::Some(test_wallets::alice());
+    let chain = proxy::Chain::MultiversX;
+    let address = ManagedAddress::from(&Address::from_slice(&test_wallets::bob().address().to_bytes())).as_managed_buffer().clone();
+
+    let mut persona = proxy::Persona {
+        address: ManagedAddress::from(&interact.wallet_address),
+        linked_wallets: ManagedVec::new(),
+    };
+    persona.linked_wallets.push(proxy::Wallet {
+        address: address.clone(),
+        chain: chain.clone(),
+    });
+
+    interact.add_wallet(chain.clone(), address.clone()).await;
+    interact = ContractInteract::new(new_caller).await;
+    interact.add_wallet(chain.clone(), address.clone()).await;
+
+    let mut persona2 = proxy::Persona {
+        address: ManagedAddress::from(&interact.wallet_address),
+        linked_wallets: ManagedVec::new(),
+    };
+    persona2.linked_wallets.push(proxy::Wallet {
+        address: address.clone(),
+        chain: chain.clone(),
+    });
+
+    let mut personas = ManagedVec::new();
+    personas.push(persona);
+    personas.push(persona2);
+
+    interact.get_personas_by_linked_wallet(chain, address, personas).await;
+}
+
+#[tokio::test]
 async fn test_add_wallet_same_address() {
-    let mut interact = ContractInteract::new().await;
+    let mut interact = ContractInteract::new(OptionalValue::None).await;
     let chain = proxy::Chain::MultiversX;
     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::ivan().address().to_bytes()));
 
@@ -262,7 +302,7 @@ async fn test_add_wallet_same_address() {
 
 #[tokio::test]
 async fn test_add_wallet_twice() {
-    let mut interact = ContractInteract::new().await;
+    let mut interact = ContractInteract::new(OptionalValue::None).await;
     let chain = proxy::Chain::MultiversX;
     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
     
@@ -271,7 +311,7 @@ async fn test_add_wallet_twice() {
 
 #[tokio::test]
 async fn test_remove_wallet() {
-    let mut interact = ContractInteract::new().await;
+    let mut interact = ContractInteract::new(OptionalValue::None).await;
     let chain = proxy::Chain::MultiversX;
     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
     let remaining_address = ManagedAddress::from(&Address::from_slice(&test_wallets::bob().address().to_bytes()));
@@ -291,7 +331,7 @@ async fn test_remove_wallet() {
 
 #[tokio::test]
 async fn test_remove_wallet_non_existing_wallet() {
-    let mut interact = ContractInteract::new().await;
+    let mut interact = ContractInteract::new(OptionalValue::None).await;
     let chain = proxy::Chain::MultiversX;
     let address = ManagedAddress::from(&Address::from_slice(&test_wallets::alice().address().to_bytes()));
 
