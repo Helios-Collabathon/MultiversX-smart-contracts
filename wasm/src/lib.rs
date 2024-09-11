@@ -6,9 +6,9 @@
 
 // Init:                                 1
 // Upgrade:                              1
-// Endpoints:                            3
+// Endpoints:                            4
 // Async Callback (empty):               1
-// Total number of exported functions:   6
+// Total number of exported functions:   7
 
 #![no_std]
 
@@ -20,9 +20,10 @@ multiversx_sc_wasm_adapter::endpoints! {
     (
         init => init
         upgrade => upgrade
+        getPersona => get_persona
+        getPersonasByAddress => get_personas_by_linked_wallet
         addWallet => add_wallet
         removeWallet => remove_wallet
-        getPersonaByAddress => get_persona_by_address
     )
 }
 
